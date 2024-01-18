@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  mqtt_led_controller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - MQTT_CLIENT_ID=zhengzhixin22060540765642
+      - MQTT_BROKER=broker.emqx.io
+      - MQTT_USER=
+      - MQTT_PASSWORD=
+      - MQTT_TOPIC=zhengxhixin/2206054076
+    depends_on:
+      - mqtt_broker
+
+  mqtt_broker:
+    image: emqx/emqx:4.2.11
+    restart: always
+    ports:
+      - "1884:1883"

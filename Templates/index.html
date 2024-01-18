@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHT22 Sensor Data</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>DHT22 Sensor Data</h1>
+    <p>Temperature: <span id="temp">{{ temp_range }}</span></p>
+    <p>Humidity: <span id="humidity">{{ humidity_range }}</span></p>
+    
+    <canvas id="temperatureChart" width="400" height="200"></canvas>
+    <canvas id="humidityChart" width="400" height="200"></canvas>
+
+    <p>Overall Average:</p>
+    <p>Temperature: <span id="overallTemp"></span> °C</p>
+    <p>Humidity: <span id="overallHumidity"></span> %</p>
+    
+    <button onclick="downloadCSV()">Download CSV</button>
+
+    <script>
+        var socket = io.connect("http://" + document.domain + ":" + location.port + "/sensor");
+
+        var temperatureData = {
+            labels: [],
+            datasets: [{
+                label: "Temperature (°C)",
+                data: [],
+                borderColor: "rgba(255, 99, 132, 1)",
+                borderWidth: 1,
+                fill: false
+            }]
+        };
+
+        var humidityData = {
+            labels: [],
+            datasets: [{
+                label: "Humidity (%)",
+                data: [],
+                borderColor: "rgba(75, 192, 192, 1)",
+                borderWidth: 1,
+                fill: false
+            }]
+        };
+
+        var chartOptions = {
+            scales: {
+                x: {
+                    type: "category",
+                    position: "bottom",
+                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    ticks: {
+                        autoSkip: false
+                    }
+                },
+                y: {
+                    min: 0,
+                    max: 100,
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                filler: {
+                    propagate: false
+                }
+            }
+        };
+
+        var temperatureChart = new Chart(document.getElementById("temperatureChart").getContext("2d"), {
+            type: "line",
+            data: temperatureData,
+            options: chartOptions
+        });
+
+        var humidityChart = new Chart(document.getElementById("humidityChart").getContext("2d"), {
+            type: "line",
+            data: humidityData,
+            options: chartOptions
+        });
+
+        socket.on("sensor_update", function (data) {
+            updateSensorData(data.temp, data.humidity);
+            updateCharts(data.temp, data.humidity);
+            updateOverallAverage(data.temp, data.humidity);
+        });
+
+        function updateSensorData(temp, humidity) {
+        
+            temp = temp.toFixed(2);
+            humidity = humidity.toFixed(2);
+        
+            document.getElementById("temp").innerText = temp;
+            document.getElementById("humidity").innerText = humidity;
+        }
+
+        function updateCharts(temp, humidity) {
+           var timestamp = new Date().getMonth(); // Use month as x-axis value
+  	   var currentTimestamp = new Date().toISOString(); 
+
+  	   temperatureData.labels.push(currentTimestamp);
+  	   humidityData.labels.push(currentTimestamp);
+
+
+            temperatureData.datasets[0].data.push(temp);
+            humidityData.datasets[0].data.push(humidity);
+
+            // Only display the last 10 data points
+            if (temperatureData.labels.length > 10) {
+                temperatureData.labels.shift();
+                humidityData.labels.shift();
+                temperatureData.datasets[0].data.shift();
+                humidityData.datasets[0].data.shift();
+            }
+
+            temperatureChart.update();
+            humidityChart.update();
+        }
+
+        function updateOverallAverage(temp, humidity) {
+            // Calculate overall average values
+            var overallTempAvg = calculateAverage(temperatureData.datasets[0].data);
+            var overallHumidityAvg = calculateAverage(humidityData.datasets[0].data);
+
+            // Display overall averages
+            document.getElementById("overallTemp").innerText = overallTempAvg.toFixed(2);
+            document.getElementById("overallHumidity").innerText = overallHumidityAvg.toFixed(2);
+
+            // Display warnings if values go beyond specified limits
+            displayWarning("overallTemp", overallTempAvg, 20, 25);
+            displayWarning("overallHumidity", overallHumidityAvg, 60, 70);
+        }
+
+        function calculateAverage(dataArray) {
+            var sum = dataArray.reduce(function (a, b) {
+                return a + b;
+            }, 0);
+
+            return sum / dataArray.length;
+        }
+
+        function displayWarning(elementId, value, lowerLimit, upperLimit) {
+            var element = document.getElementById(elementId);
+            if (value < lowerLimit || value > upperLimit) {
+                element.style.color = "red";
+            } else {
+                element.style.color = "black";
+            }
+        }
+
+        // Manually draw shaded areas for the months that are not good for pulverizing vines
+        var ctxTemperature = document.getElementById("temperatureChart").getContext("2d");
+        var ctxHumidity = document.getElementById("humidityChart").getContext("2d");
+
+        ctxTemperature.fillStyle = "rgba(255, 0, 0, 0.2)"; // Red color with 20% opacity
+        ctxHumidity.fillStyle = "rgba(255, 0, 0, 0.2)";
+
+        ctxTemperature.fillRect(
+            new Date("2024-01-01").getMonth() * (temperatureChart.width / 12),
+            0,
+            (new Date("2024-12-31").getMonth() + 1) * (temperatureChart.width / 12),
+            temperatureChart.height
+        );
+
+        ctxHumidity.fillRect(
+            new Date("2024-01-01").getMonth() * (humidityChart.width / 12),
+            0,
+            (new Date("2024-12-31").getMonth() + 1) * (humidityChart.width / 12),
+            humidityChart.height
+        );
+        
+        function downloadCSV() {
+    // Combine temperature, humidity, and month data
+    var combinedData = temperatureData.labels.map(function (timestamp, index) {
+      var date = new Date(timestamp);
+      return {
+        timestamp: timestamp,
+        month: date.toLocaleString('en-US', { month: 'short' }), // Add this line for month information
+        temperature: temperatureData.datasets[0].data[index],
+        humidity: humidityData.datasets[0].data[index],
+      };
+    });
+
+    // Create CSV content
+    var csvContent = "timestamp,month,temperature,humidity\n";
+    combinedData.forEach(function (data) {
+      csvContent += `${data.timestamp},${data.month},${data.temperature},${data.humidity}\n`;
+    });
+
+    // Create a Blob object and initiate download
+    var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    var link = document.createElement("a");
+
+    // Set the download attribute with a specific file name
+    link.download = "sensor_data_with_month.csv";
+
+    if (link.download !== undefined) {
+      // For modern browsers
+      var url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // For IE 11
+      window.navigator.msSaveBlob(blob, "sensor_data_with_month.csv");
+    }
+  }
+    </script>
+</body>
+</html>
+
