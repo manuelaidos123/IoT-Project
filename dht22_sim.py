@@ -67,7 +67,7 @@ def led_thread():
         for i in range(1, 6):
             instance = f"instance{i}"
             print(f"Measuring weather conditions for {instance}... ", end="")
-            humidity, temperature = random.uniform(40, 35), random.uniform(50, 40)
+            humidity, temperature = random.uniform(30, 35), random.uniform(30, 33)
             msg_data = {
                 "temp": temperature,
                 "humidity": humidity,
