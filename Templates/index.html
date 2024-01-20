@@ -9,8 +9,14 @@
 </head>
 <body>
     <h1>DHT22 Sensor Data</h1>
-    <p>Temperature: <span id="temp">{{ temp_range }}</span></p>
-    <p>Humidity: <span id="humidity">{{ humidity_range }}</span></p>
+    <p>Temperature: <span id="temp">{{ sensor_data["temp"] }}</span></p>
+    <p>Humidity: <span id="humidity">{{ sensor_data["humidity"] }}</span></p>
+
+    {% if 20 <= sensor_data["temp"] <= 25 %}
+        <p>Temperature is within the expected range (20-25 ºC)</p>
+    {% else %}
+        <p style="color: red;">Temperature is outside the expected range (20-25 ºC)</p>
+    {% endif %}
     
     <canvas id="temperatureChart" width="400" height="200"></canvas>
     <canvas id="humidityChart" width="400" height="200"></canvas>

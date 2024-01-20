@@ -1,91 +1,80 @@
-import time
-import random
-import json
-import threading
-import paho.mqtt.client as mqtt
 import os
+import logging
+import paho.mqtt.client as mqtt
+import time
+import json
+import random  # Added for simulation
 
-# LED Configuration
-class LED:
-    def __init__(self, pin):
-        self.pin = pin
-        self.pwmval = 1023
+# Environment variables and MQTT configuration
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+SENSOR_TYPE = os.getenv("SENSOR_TYPE", "DHT22").upper()
+SENSOR_PIN = int(os.getenv('SENSOR_PIN', '4'))
+SENSOR_CHECK_INTERVAL = int(os.getenv('SENSOR_CHECK_INTERVAL', 30))
+DECIMAL_POINTS = int(os.getenv("SENSOR_DECIMAL_POINTS", 2))
 
-    def duty(self, value):
-        self.pwmval = value
-        print(f"LED Duty: {value}")
+MQTT_HOSTNAME = os.getenv("MQTT_HOSTNAME", "localhost")
+MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
+MQTT_TIMEOUT = int(os.getenv("MQTT_TIMEOUT", 60))
+MQTT_TOPIC = os.getenv("MQTT_TOPIC", 'sensor/value')
+MQTT_CLIENT_ID = os.getenv("MQTT_CLIENT_ID", "dht-sensor-mqtt")
+MQTT_CLEAN_SESSION = os.getenv("CLIENT_CLEAN_SESSION", False)
+MQTT_TLS_INSECURE = os.getenv("CLIENT_TLS_INSECURE", True)
+MQTT_CLIENT_QOS = int(os.getenv("CLIENT_QOS", 0))
+MQTT_USERNAME = os.getenv('MQTT_USERNAME', None)
+MQTT_PASSWORD = os.getenv('MQTT_PASSWORD', None)
 
-led_blue = LED(2)
+# Logging configuration
+def configure_logging():
+    level_map = {
+        'INFO': logging.INFO,
+        'DEBUG': logging.DEBUG,
+        'WARN': logging.WARNING,
+        'ERROR': logging.ERROR
+    }
 
-# MQTT Configuration
-MQTT_CLIENT_ID = "zhengzhixin22060540765642"
-MQTT_BROKER = "broker.emqx.io"
-MQTT_USER = ""
-MQTT_PASSWORD = ""
-MQTT_TOPIC = os.environ.get("MQTT_TOPIC", "default_topic")
+    log_level = level_map.get(LOG_LEVEL, "Unsupported log level provided!")
+    logging.basicConfig(level=log_level)
 
-# Count variable
-count = 0
+# MQTT callbacks
+def on_connect(client, userdata, flags, rc):
+    logging.info("Connected to the MQTT broker!")
 
-# MQTT Callback
-def on_message(client, userdata, message):
-    global count, led_blue
+def on_disconnect(client, userdata, flags, rc):
+    logging.warn(f"Disconnected from the MQTT broker. End state - '{rc}'")
 
-    topic = message.topic
-    msg = message.payload.decode("utf-8")
+# Main execution
+if __name__ == '__main__':
+    configure_logging()
 
-    if topic == f"ledctl{MQTT_TOPIC.split('/')[1]}":
-        print((topic, msg))
-        if msg == "on":
-            pwmval = 0
-            led_blue.duty(pwmval)
-        elif msg == "off":
-            pwmval = 1023
-            led_blue.duty(pwmval)
+    if MQTT_HOSTNAME is None or MQTT_PORT is None:
+        logging.error("Could not acquire MQTT broker connection parameters...")
+        exit(1)
 
-    elif topic == f"pwmled{MQTT_TOPIC.split('/')[1]}":
-        pwmval = int(((100 - int(msg)) / 100) * 1023)
-        if pwmval > 1023: pwmval = 1023
-        if pwmval < 0: pwmval = 0
-        print((topic, pwmval))
-        led_blue.duty(pwmval)
+    client = mqtt.Client(MQTT_CLIENT_ID, MQTT_CLEAN_SESSION)
+    client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+    client.on_connect = on_connect
+    client.on_disconnect = on_disconnect
+    client.connect(MQTT_HOSTNAME, MQTT_PORT, MQTT_TIMEOUT)
+    client.loop_start()
 
-# MQTT Client Setup
-client = mqtt.Client(MQTT_CLIENT_ID)
-client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
-client.connect(MQTT_BROKER)
-client.subscribe("ledctl2206054076")
-client.subscribe("pwmled2206054076")
-client.subscribe("ledstatus2206054076")
-client.on_message = on_message
-
-# Thread for LED control
-def led_thread():
-    global count
+    logging.info("Successfully initialized application! Starting simulation...")
 
     while True:
-        for i in range(1, 6):
-            instance = f"instance{i}"
-            print(f"Measuring weather conditions for {instance}... ", end="")
-            humidity, temperature = random.uniform(30.1, 31), random.uniform(33.2, 33.7)
-            msg_data = {
-                "temp": temperature,
-                "humidity": humidity,
-                "instance": instance
+        try:
+            # Simulate sensor readings
+            temperature = random.uniform(31, 33)
+            humidity = random.uniform(31, 33)
+
+            # Log and publish the simulated data
+            logging.debug(f"Simulated sensor values - temperature '{temperature}', humidity '{humidity}'")
+            data = {
+                'temperature': round(temperature, DECIMAL_POINTS),
+                'humidity_percentage': round(humidity, DECIMAL_POINTS)
             }
-            message = json.dumps(msg_data)
-            print("Updated!")
-            print(f"Reporting to MQTT topic {MQTT_TOPIC}: {message}")
-            client.publish(MQTT_TOPIC, message)
-            time.sleep(1)
 
-# Use threading for the common instance
-thread = threading.Thread(target=led_thread)
-thread.start()
-
-        
-# MQTT Message Loop
-while True:
-    client.loop_start()
-    time.sleep(1)
-
+            logging.debug(f"Publishing data to topic - '{MQTT_TOPIC}'")
+            client.publish(MQTT_TOPIC, json.dumps(data))
+        except Exception as e:
+            logging.error(f"Error in simulation: {e}")
+        finally:
+            time.sleep(SENSOR_CHECK_INTERVAL)
