@@ -7,12 +7,32 @@ import threading
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 import joblib
+import httplib2  # Import httplib2
 
 app = Flask(__name__)
 socketio = SocketIO(app)
 
+THINGSBOARD_HOST = 'https://thingsboard.cloud'
+ACCESS_TOKEN = 'xsHO2Sx2NzGfWebhz70B'
+
 # Simulated Sensor Data
 sensor_data = {"temp": 0, "humidity": 0}
+
+def send_to_thingsboard(data):
+    url = f'{THINGSBOARD_HOST}/api/v1/{ACCESS_TOKEN}/telemetry'
+    headers = {'Content-Type': 'application/json'}
+    
+    http_obj = httplib2.Http()
+    response, content = http_obj.request(
+        uri=url,
+        method='POST',
+        body=json.dumps(data),
+        headers=headers
+    )
+
+    # Print the response (optional)
+    print(f"Response status: {response['status']}")
+    print(f"Response content: {content}")
 
 def simulate_sensor_data():
     global sensor_data
@@ -22,6 +42,7 @@ def simulate_sensor_data():
             "humidity": round(random.uniform(31, 33), 2)
         }
         socketio.emit("sensor_update", sensor_data, namespace="/sensor")
+        send_to_thingsboard(sensor_data)
         time.sleep(1)
 
 thread = threading.Thread(target=simulate_sensor_data)
