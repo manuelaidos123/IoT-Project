@@ -14,6 +14,11 @@ Follow these steps to install and run the project.
 
 1. Clone the repository.
 2. Navigate to the project directory.
+3. Make sure docker is running (Docker Desktop on Windows or run systemctl docker on Linux)
+4. Open CLI inside the project directory
+5. run dht22_sim.py using docker or docker compose
+6. Open a new CLI terminal and execute python dhtt22_info_website.py to run the Python flask script
+7. open a browser Tab and copy and paste the link where the server is running
 
 ### Docker Build
 
