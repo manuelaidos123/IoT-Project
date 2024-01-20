@@ -19,6 +19,8 @@ Follow these steps to install and run the project.
 5. run dht22_sim.py using docker or docker compose
 6. Open a new CLI terminal and execute python dhtt22_info_website.py to run the Python flask script
 7. open a browser Tab and copy and paste the link where the server is running
+8. to obtain a Dataframe click on Download CSV button to download a csv file and after that adapt the csv_files = glob.glob  line on graphicShow.py
+   and execute python graphicShow.py on a new CLI terminal to get the Dataframe 
 
 ### Docker Build
 
