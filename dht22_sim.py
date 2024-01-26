@@ -3,7 +3,7 @@ import logging
 import paho.mqtt.client as mqtt
 import time
 import json
-import random  # Added for simulation
+import random  
 
 # Environment variables and MQTT configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()

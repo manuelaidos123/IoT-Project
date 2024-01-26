@@ -7,32 +7,32 @@ import threading
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 import joblib
-import httplib2  # Import httplib2
+import httplib2  
 
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-THINGSBOARD_HOST = 'https://thingsboard.cloud'
-ACCESS_TOKEN = 'xsHO2Sx2NzGfWebhz70B'
+#THINGSBOARD_HOST = 'https://thingsboard.cloud'
+#ACCESS_TOKEN = 'xsHO2Sx2NzGfWebhz70B'
 
 # Simulated Sensor Data
 sensor_data = {"temp": 0, "humidity": 0}
 
-def send_to_thingsboard(data):
-    url = f'{THINGSBOARD_HOST}/api/v1/{ACCESS_TOKEN}/telemetry'
-    headers = {'Content-Type': 'application/json'}
-    
-    http_obj = httplib2.Http()
-    response, content = http_obj.request(
-        uri=url,
-        method='POST',
-        body=json.dumps(data),
-        headers=headers
-    )
+#def send_to_thingsboard(data):
+#    url = f'{THINGSBOARD_HOST}/api/v1/{ACCESS_TOKEN}/telemetry'
+#    headers = {'Content-Type': 'application/json'}
+#    
+#    http_obj = httplib2.Http()
+#    response, content = http_obj.request(
+#        uri=url,
+#        method='POST',
+#        body=json.dumps(data),
+#        headers=headers
+#    )
 
     # Print the response (optional)
-    print(f"Response status: {response['status']}")
-    print(f"Response content: {content}")
+#    print(f"Response status: {response['status']}")
+#    print(f"Response content: {content}")
 
 def simulate_sensor_data():
     global sensor_data
@@ -65,17 +65,17 @@ def download_csv():
         csv_file.write(csv_content)
     return send_from_directory("static", "sensor_data.csv", as_attachment=True)
 
-@app.route("/train_model")
-def train_model():
-    df = pd.read_csv('static/sensor_data.csv')
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    df['timestamp'] = df['timestamp'].astype(int) // 10**9
-    X = df[['timestamp']]
-    y = df['temperature']
-    model = LinearRegression()
-    model.fit(X, y)
-    joblib.dump(model, 'static/temperature_model.joblib')
-    return jsonify({"message": "Model trained successfully."})
+#@app.route("/train_model")
+#def train_model():
+#    df = pd.read_csv('static/sensor_data.csv')
+#    df['timestamp'] = pd.to_datetime(df['timestamp'])
+#    df['timestamp'] = df['timestamp'].astype(int) // 10**9
+#    X = df[['timestamp']]
+#    y = df['temperature']
+#    model = LinearRegression()
+#    model.fit(X, y)
+#    joblib.dump(model, 'static/temperature_model.joblib')
+#    return jsonify({"message": "Model trained successfully."})
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)
