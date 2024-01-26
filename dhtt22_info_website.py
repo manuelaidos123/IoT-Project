@@ -42,7 +42,6 @@ def simulate_sensor_data():
             "humidity": round(random.uniform(31, 33), 2)
         }
         socketio.emit("sensor_update", sensor_data, namespace="/sensor")
-        send_to_thingsboard(sensor_data)
         time.sleep(1)
 
 thread = threading.Thread(target=simulate_sensor_data)
