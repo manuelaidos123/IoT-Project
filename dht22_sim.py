@@ -78,6 +78,6 @@ if __name__ == '__main__':
             logging.error(f"Error in simulation: {e}")
         finally:
             time.sleep(SENSOR_CHECK_INTERVAL)
-            
+    
             a = "test"
             print(a)
