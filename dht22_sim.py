@@ -79,5 +79,4 @@ if __name__ == '__main__':
         finally:
             time.sleep(SENSOR_CHECK_INTERVAL)
     
-            a = "test"
-            print(a)
+            
