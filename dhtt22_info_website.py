@@ -1,47 +1,69 @@
-from flask import Flask, render_template, jsonify, send_from_directory
-from flask_socketio import SocketIO
-import json
-import random
+import signal
 import time
+import json
+import random  
+import paho.mqtt.client as mqtt
+from flask import Flask, render_template, send_from_directory
+from flask_socketio import SocketIO
 import threading
-import pandas as pd
-from sklearn.linear_model import LinearRegression
-import joblib
-import httplib2  
+from threading import Event
 
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-#THINGSBOARD_HOST = 'https://thingsboard.cloud'
-#ACCESS_TOKEN = 'xsHO2Sx2NzGfWebhz70B'
+from threading import Event
 
 # Simulated Sensor Data
-sensor_data = {"temp": 0, "humidity": 0}
+sensor_data = {}
 
-#def send_to_thingsboard(data):
-#    url = f'{THINGSBOARD_HOST}/api/v1/{ACCESS_TOKEN}/telemetry'
-#    headers = {'Content-Type': 'application/json'}
-#    
-#    http_obj = httplib2.Http()
-#    response, content = http_obj.request(
-#        uri=url,
-#        method='POST',
-#        body=json.dumps(data),
-#        headers=headers
-#    )
+event = Event()  # Create an instance of the Event class
 
-    # Print the response (optional)
-#    print(f"Response status: {response['status']}")
-#    print(f"Response content: {content}")
+def clear_cache():
+    global sensor_data
+    sensor_data = {}
+
+signal.signal(signal.SIGTERM, clear_cache)
+
+clear_cache() # Clear the cache before the loop starts
+
+def on_message(client, userdata, msg):
+    global sensor_data
+    payload = json.loads(msg.payload.decode())
+    sensor_data = payload
+
+    socketio.emit("sensor_update", sensor_data, namespace="/sensor")
+
+client = mqtt.Client()
+client.connect("broker.emqx.io", 1883)
+client.subscribe("/sensor/data")
+client.on_message = on_message
 
 def simulate_sensor_data():
     global sensor_data
+
     while True:
-        sensor_data = {
-            "temp": round(random.uniform(31, 33), 2),
-            "humidity": round(random.uniform(31, 33), 2)
+        # Simulate sensor readings
+        temperature = round(random.uniform(31, 33), 2)
+        humidity = round(random.uniform(31, 33), 2)
+
+        # Log and publish the simulated data
+        print(f"Simulated sensor values - temperature '{temperature}', humidity '{humidity}'")
+        data = {
+            'temperature': temperature,
+            'humidity_percentage': humidity
         }
+
+        # Send sensor data to MQTT broker
+        client.publish("/sensor/data", json.dumps(data))
+
+        # Update the sensor data dictionary
+        sensor_data["temp"] = temperature
+        sensor_data["humidity"] = humidity
+
         socketio.emit("sensor_update", sensor_data, namespace="/sensor")
+
+        event.set()  # Set event to signal that data is ready
+
         time.sleep(1)
 
 thread = threading.Thread(target=simulate_sensor_data)
@@ -50,11 +72,26 @@ thread.start()
 
 @app.route("/")
 def home():
-    return render_template("index.html", sensor_data=sensor_data)
+    # Wait for data to be ready
+    event.wait()  # Call wait() on the event instance
+
+    # Get sensor data
+    temperature = sensor_data["temp"]
+    humidity = sensor_data["humidity"]
+
+    # Render the template
+    return render_template("index.html", temperature=temperature, humidity=humidity, sensor_data=sensor_data)
+
+
+if __name__ == "__main__":
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
 
 @socketio.on("connect", namespace="/sensor")
 def handle_connect():
     print("Client connected")
+
+    # Update the client with the latest sensor data
+    socketio.emit("sensor_update", sensor_data, namespace="/sensor")
 
 @app.route("/download_csv")
 def download_csv():

@@ -4,20 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DHT22 Sensor Data</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/5.3.0/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>DHT22 Sensor Data</h1>
-    <p>Temperature: <span id="temp">{{ sensor_data["temp"] }}</span></p>
-    <p>Humidity: <span id="humidity">{{ sensor_data["humidity"] }}</span></p>
-
-    {% if 20 <= sensor_data["temp"] <= 25 %}
-        <p>Temperature is within the expected range (20-25 ºC)</p>
-    {% else %}
-        <p style="color: red;">Temperature is outside the expected range (20-25 ºC)</p>
-    {% endif %}
-    
+    <p>Temperature: <span id="temp"></span></p>
+    <p>Humidity: <span id="humidity"></span></p>
     <canvas id="temperatureChart" width="400" height="200"></canvas>
     <canvas id="humidityChart" width="400" height="200"></canvas>
 
@@ -57,7 +50,6 @@
                 x: {
                     type: "category",
                     position: "bottom",
-                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
                     grid: {
                         drawOnChartArea: false
                     },
@@ -92,31 +84,25 @@
 
         socket.on("sensor_update", function (data) {
             updateSensorData(data.temp, data.humidity);
-            updateCharts(data.temp, data.humidity);
-            updateOverallAverage(data.temp, data.humidity);
+            updateCharts(data);
+            updateOverallAverage();
         });
 
         function updateSensorData(temp, humidity) {
-        
             temp = temp.toFixed(2);
             humidity = humidity.toFixed(2);
-        
             document.getElementById("temp").innerText = temp;
             document.getElementById("humidity").innerText = humidity;
         }
 
-        function updateCharts(temp, humidity) {
-           var timestamp = new Date().getMonth(); // Use month as x-axis value
-  	   var currentTimestamp = new Date().toISOString(); 
+        function updateCharts(data) {
+            var timestamp = new Date(data.timestamp).toISOString();
+            temperatureData.labels.push(timestamp);
+            humidityData.labels.push(timestamp);
 
-  	   temperatureData.labels.push(currentTimestamp);
-  	   humidityData.labels.push(currentTimestamp);
+            temperatureData.datasets[0].data.push(data.temp);
+            humidityData.datasets[0].data.push(data.humidity);
 
-
-            temperatureData.datasets[0].data.push(temp);
-            humidityData.datasets[0].data.push(humidity);
-
-            // Only display the last 10 data points
             if (temperatureData.labels.length > 10) {
                 temperatureData.labels.shift();
                 humidityData.labels.shift();
@@ -128,16 +114,13 @@
             humidityChart.update();
         }
 
-        function updateOverallAverage(temp, humidity) {
-            // Calculate overall average values
+        function updateOverallAverage() {
             var overallTempAvg = calculateAverage(temperatureData.datasets[0].data);
             var overallHumidityAvg = calculateAverage(humidityData.datasets[0].data);
 
-            // Display overall averages
             document.getElementById("overallTemp").innerText = overallTempAvg.toFixed(2);
             document.getElementById("overallHumidity").innerText = overallHumidityAvg.toFixed(2);
 
-            // Display warnings if values go beyond specified limits
             displayWarning("overallTemp", overallTempAvg, 20, 25);
             displayWarning("overallHumidity", overallHumidityAvg, 60, 70);
         }
@@ -159,11 +142,10 @@
             }
         }
 
-        // Manually draw shaded areas for the months that are not good for pulverizing vines
         var ctxTemperature = document.getElementById("temperatureChart").getContext("2d");
         var ctxHumidity = document.getElementById("humidityChart").getContext("2d");
 
-        ctxTemperature.fillStyle = "rgba(255, 0, 0, 0.2)"; // Red color with 20% opacity
+        ctxTemperature.fillStyle = "rgba(255, 0, 0, 0.2)";
         ctxHumidity.fillStyle = "rgba(255, 0, 0, 0.2)";
 
         ctxTemperature.fillRect(
@@ -179,46 +161,39 @@
             (new Date("2024-12-31").getMonth() + 1) * (humidityChart.width / 12),
             humidityChart.height
         );
-        
+
         function downloadCSV() {
-    // Combine temperature, humidity, and month data
-    var combinedData = temperatureData.labels.map(function (timestamp, index) {
-      var date = new Date(timestamp);
-      return {
-        timestamp: timestamp,
-        month: date.toLocaleString('en-US', { month: 'short' }), // Add this line for month information
-        temperature: temperatureData.datasets[0].data[index],
-        humidity: humidityData.datasets[0].data[index],
-      };
-    });
+            var combinedData = temperatureData.labels.map(function (timestamp, index) {
+                var date = new Date(timestamp);
+                return {
+                    timestamp: timestamp,
+                    month: date.toLocaleString('en-US', { month: 'short' }),
+                    temperature: temperatureData.datasets[0].data[index],
+                    humidity: humidityData.datasets[0].data[index],
+                };
+            });
 
-    // Create CSV content
-    var csvContent = "timestamp,month,temperature,humidity\n";
-    combinedData.forEach(function (data) {
-      csvContent += `${data.timestamp},${data.month},${data.temperature},${data.humidity}\n`;
-    });
+            var csvContent = "timestamp,month,temperature,humidity\n";
+            combinedData.forEach(function (data) {
+                csvContent += `${data.timestamp},${data.month},${data.temperature},${data.humidity}\n`;
+            });
 
-    // Create a Blob object and initiate download
-    var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    var link = document.createElement("a");
+            var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            var link = document.createElement("a");
 
-    // Set the download attribute with a specific file name
-    link.download = "sensor_data_with_month.csv";
+            link.download = "sensor_data_with_month.csv";
 
-    if (link.download !== undefined) {
-      // For modern browsers
-      var url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else {
-      // For IE 11
-      window.navigator.msSaveBlob(blob, "sensor_data_with_month.csv");
-    }
-  }
+            if (link.download !== undefined) {
+                var url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.style.visibility = "hidden";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                window.navigator.msSaveBlob(blob, "sensor_data_with_month.csv");
+            }
+        }
     </script>
 </body>
 </html>
-

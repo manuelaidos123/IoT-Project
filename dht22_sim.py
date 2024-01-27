@@ -3,7 +3,7 @@ import logging
 import paho.mqtt.client as mqtt
 import time
 import json
-import random  
+import random
 
 # Environment variables and MQTT configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -12,13 +12,13 @@ SENSOR_PIN = int(os.getenv('SENSOR_PIN', '4'))
 SENSOR_CHECK_INTERVAL = int(os.getenv('SENSOR_CHECK_INTERVAL', 30))
 DECIMAL_POINTS = int(os.getenv("SENSOR_DECIMAL_POINTS", 2))
 
-MQTT_HOSTNAME = os.getenv("MQTT_HOSTNAME", "localhost")
-MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
+MQTT_HOSTNAME = "broker.emqx.io"
+MQTT_PORT = 1883
 MQTT_TIMEOUT = int(os.getenv("MQTT_TIMEOUT", 60))
 MQTT_TOPIC = os.getenv("MQTT_TOPIC", 'sensor/value')
 MQTT_CLIENT_ID = os.getenv("MQTT_CLIENT_ID", "dht-sensor-mqtt")
-MQTT_CLEAN_SESSION = os.getenv("CLIENT_CLEAN_SESSION", False)
-MQTT_TLS_INSECURE = os.getenv("CLIENT_TLS_INSECURE", True)
+MQTT_CLEAN_SESSION = os.getenv("CLIENT_CLEAN_SESSION", True)
+MQTT_TLS_INSECURE = os.getenv("CLIENT_TLS_INSECURE", False)
 MQTT_CLIENT_QOS = int(os.getenv("CLIENT_QOS", 0))
 MQTT_USERNAME = os.getenv('MQTT_USERNAME', None)
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD', None)
@@ -78,5 +78,3 @@ if __name__ == '__main__':
             logging.error(f"Error in simulation: {e}")
         finally:
             time.sleep(SENSOR_CHECK_INTERVAL)
-    
-            
