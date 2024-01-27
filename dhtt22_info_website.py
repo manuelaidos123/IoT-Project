@@ -11,7 +11,7 @@ socketio = SocketIO(app)
 MQTT_BROKER = "broker.emqx.io"
 MQTT_USER = ""
 MQTT_PASSWORD = ""
-MQTT_TOPIC = "zhengxhixin/2206054076"
+MQTT_TOPIC = "weather_conditions"
 
 # Initial sensor data
 sensor_data = {"temp": 0, "humidity": 0}

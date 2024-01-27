@@ -22,7 +22,7 @@ MQTT_CLIENT_ID = "zhengzhixin22060540765642"
 MQTT_BROKER = "broker.emqx.io"
 MQTT_USER = ""
 MQTT_PASSWORD = ""
-MQTT_TOPIC = os.environ.get("MQTT_TOPIC", "default_topic")
+MQTT_TOPIC = "weather_conditions"
 
 # Count variable
 count = 0
@@ -34,8 +34,9 @@ def on_message(client, userdata, message):
     topic = message.topic
     msg = message.payload.decode("utf-8")
 
-    if topic == f"ledctl{MQTT_TOPIC.split('/')[1]}":
-        print((topic, msg))
+    print((topic, msg))
+
+    if topic.startswith("ledctl"):
         if msg == "on":
             pwmval = 0
             led_blue.duty(pwmval)
@@ -43,10 +44,12 @@ def on_message(client, userdata, message):
             pwmval = 1023
             led_blue.duty(pwmval)
 
-    elif topic == f"pwmled{MQTT_TOPIC.split('/')[1]}":
+    elif topic.startswith("pwmled"):
         pwmval = int(((100 - int(msg)) / 100) * 1023)
-        if pwmval > 1023: pwmval = 1023
-        if pwmval < 0: pwmval = 0
+        if pwmval > 1023:
+            pwmval = 1023
+        if pwmval < 0:
+            pwmval = 0
         print((topic, pwmval))
         led_blue.duty(pwmval)
 
@@ -54,9 +57,10 @@ def on_message(client, userdata, message):
 client = mqtt.Client(MQTT_CLIENT_ID)
 client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
 client.connect(MQTT_BROKER)
-client.subscribe("ledctl2206054076")
-client.subscribe("pwmled2206054076")
-client.subscribe("ledstatus2206054076")
+client.subscribe("ledctl")
+client.subscribe("pwmled")
+client.subscribe("ledstatus")
+client.subscribe(MQTT_TOPIC)
 client.on_message = on_message
 
 # Thread for LED control
@@ -67,7 +71,7 @@ def led_thread():
         for i in range(1, 6):
             instance = f"instance{i}"
             print(f"Measuring weather conditions for {instance}... ", end="")
-            humidity, temperature = random.uniform(40, 35), random.uniform(50, 40)
+            humidity, temperature = random.uniform(30.1, 31), random.uniform(33.2, 33.7)
             msg_data = {
                 "temp": temperature,
                 "humidity": humidity,
@@ -83,9 +87,7 @@ def led_thread():
 thread = threading.Thread(target=led_thread)
 thread.start()
 
-        
 # MQTT Message Loop
 while True:
     client.loop_start()
     time.sleep(1)
-
