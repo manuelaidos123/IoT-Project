@@ -11,7 +11,11 @@ from threading import Event
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-from threading import Event
+# MQTT Configuration
+MQTT_BROKER = "broker.emqx.io"
+MQTT_USER = ""
+MQTT_PASSWORD = ""
+MQTT_TOPIC = "weather_conditions"
 
 # Simulated Sensor Data
 sensor_data = {}

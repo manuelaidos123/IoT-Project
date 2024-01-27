@@ -4,7 +4,7 @@ import glob
 import os
 
 # Find the latest CSV file in the directory
-csv_files = glob.glob('sensor_data_with_month (12).csv')  
+csv_files = glob.glob('D:\Transferencias\sensor_data_with_month (1).csv')  
 latest_csv = max(csv_files, key=os.path.getctime)
 
 # Load the CSV file
@@ -13,31 +13,21 @@ df = pd.read_csv(latest_csv)
 # Convert timestamp to datetime format
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 
-# Create subplots
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
+# Plotting
+plt.figure(figsize=(10, 6))
+plt.plot(df['timestamp'], df['temperature'], label='Temperature (°C)', marker='o')
+plt.plot(df['timestamp'], df['humidity'], label='Humidity (%)', marker='o')
 
-# Plot Temperature
-ax1.plot(df['timestamp'], df['temperature'], label='Temperature (°C)', marker='o', color='red')
-ax1.set_ylabel('Temperature (°C)')
-ax1.legend()
-ax1.grid(True)
-
-# Plot Humidity
-ax2.plot(df['timestamp'], df['humidity'], label='Humidity (%)', marker='o', color='blue')
-ax2.set_xlabel('Timestamp')
-ax2.set_ylabel('Humidity (%)')
-ax2.legend()
-ax2.grid(True)
-
-# Title for the entire figure
-plt.suptitle('Temperature and Humidity Over Time')
-
-# Adjust layout
+plt.title('Temperature and Humidity Over Time')
+plt.xlabel('Timestamp')
+plt.ylabel('Values')
+plt.legend()
+plt.grid(True)
 plt.tight_layout()
 
-# Save the plots to image files
-plt.savefig('temperature_plot.png')
-plt.savefig('humidity_plot.png')
+# Save the plot to an image file
+plt.savefig('temperature_humidity_plot.png')
 
-# Show the plots (optional)
+# Show the plot (optional)
 plt.show()
+
